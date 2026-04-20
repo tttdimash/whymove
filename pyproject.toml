@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whymove"
+version = "0.1.0"
+description = "Chess move intent explanation using AI"
+requires-python = ">=3.11"
+dependencies = [
+    "python-chess>=1.10",
+    "stockfish>=3.28",
+    "scikit-learn>=1.4",
+    "anthropic>=0.26",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "click>=8.1",
+    "pydantic>=2.7",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "pyarrow>=16",
+    "joblib>=1.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "pytest-asyncio",
+    "httpx",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+whymove = "whymove.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
