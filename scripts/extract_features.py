@@ -41,11 +41,13 @@ def process_pgn_file(
 
     rows: list[dict] = []
     game_count = 0
+    total_moves = 0
+    SAVE_EVERY = 100  # save to disk every 100 games
 
     with create_engine("stockfish", path=stockfish_path, depth=depth) as engine:
         extractor = FeatureExtractor(engine)
 
-        with open(pgn_path) as pgn_file:
+        with open(pgn_path, encoding="latin-1") as pgn_file:
             while True:
                 game = chess.pgn.read_game(pgn_file)
                 if game is None:
@@ -71,18 +73,26 @@ def process_pgn_file(
                         row["move_uci"] = move.uci()
                         row["move_san"] = board.san(move)
                         rows.append(row)
+                        total_moves += 1
                     except Exception as e:
                         click.echo(f"  Warning: skipped move {move.uci()} in {game_id}: {e}", err=True)
 
                     board.push(move)
 
                 game_count += 1
-                if game_count % 100 == 0:
-                    click.echo(f"Processed {game_count} games, {len(rows)} moves...")
 
+                # Save incrementally every SAVE_EVERY games
+                if game_count % SAVE_EVERY == 0:
+                    df = pd.DataFrame(rows)
+                    df.to_parquet(output_path, index=False)
+                    target = max_games or "?"
+                    pct = int(game_count / max_games * 100) if max_games else "?"
+                    click.echo(f"[{pct}%] {game_count}/{target} games | {total_moves:,} moves | saved ✓")
+
+    # Final save
     df = pd.DataFrame(rows)
     df.to_parquet(output_path, index=False)
-    click.echo(f"Saved {len(df)} feature rows to {output_path}")
+    click.echo(f"\nDone. {game_count} games, {total_moves:,} moves saved to {output_path}")
 
 
 @click.command()

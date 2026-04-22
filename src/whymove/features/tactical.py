@@ -70,7 +70,7 @@ def is_skewer(board_before: chess.Board, move: chess.Move) -> bool:
         if direction is None:
             continue
         behind_sq = sq + direction
-        while chess.is_valid(chess.Square(behind_sq)) if 0 <= behind_sq <= 63 else False:
+        while 0 <= behind_sq <= 63:
             behind_piece = board_after.piece_at(chess.Square(behind_sq))
             if behind_piece:
                 if behind_piece.color == opponent:
