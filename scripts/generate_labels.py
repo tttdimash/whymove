@@ -114,7 +114,7 @@ def generate_labels_for_batch(
                     pass
         click.echo(f"Resuming: {len(labeled_ids)} already labeled")
 
-    explainer = ClaudeExplainer()
+    explainer = ClaudeExplainer(model="claude-haiku-4-5-20251001", max_tokens=50)
     all_labels = [l.value for l in ALL_LABELS]
 
     with open(output_path, "a") as out_f:

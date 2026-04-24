@@ -44,3 +44,4 @@ data/labels/*.jsonl
 .DS_Store
 logs/
 data/raw/*.pgn
+games/

@@ -23,7 +23,7 @@ class ClaudeExplainer:
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "claude-opus-4-5",
+        model: str = "claude-haiku-4-5-20251001",
         max_tokens: int = 300,
     ) -> None:
         self._client = anthropic.Anthropic(api_key=api_key)
@@ -66,6 +66,12 @@ class ClaudeExplainer:
             messages=[{"role": "user", "content": user_prompt}],
         )
         text = message.content[0].text.strip()  # type: ignore[union-attr]
+        # Strip markdown code blocks if Claude wraps the response
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
         try:
             labels = json.loads(text)
             # Filter to valid labels only
