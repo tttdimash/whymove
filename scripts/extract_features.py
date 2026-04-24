@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import io
 import sys
-import uuid
 from pathlib import Path
 
 import chess
@@ -53,7 +52,11 @@ def process_pgn_file(
                 if max_games and game_count >= max_games:
                     break
 
-                game_id = game.headers.get("Site", "") or str(uuid.uuid4())[:8]
+                white = game.headers.get("White", "?").replace(" ", "_")[:20]
+                black = game.headers.get("Black", "?").replace(" ", "_")[:20]
+                date = game.headers.get("Date", "????.??.??").replace(".", "")[:8]
+                round_ = game.headers.get("Round", "?").replace(".", "_")
+                game_id = f"{white}_vs_{black}_{date}_r{round_}"
                 board = game.board()
 
                 for move_num, node in enumerate(game.mainline()):
