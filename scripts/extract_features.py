@@ -44,7 +44,7 @@ def process_pgn_file(
     with create_engine("stockfish", path=stockfish_path, depth=depth) as engine:
         extractor = FeatureExtractor(engine)
 
-        with open(pgn_path) as pgn_file:
+        with open(pgn_path, encoding="latin-1") as pgn_file:
             while True:
                 game = chess.pgn.read_game(pgn_file)
                 if game is None:
@@ -82,6 +82,8 @@ def process_pgn_file(
                 game_count += 1
                 if game_count % 100 == 0:
                     click.echo(f"Processed {game_count} games, {len(rows)} moves...")
+                    # Save incrementally to avoid losing progress on crash
+                    pd.DataFrame(rows).to_parquet(output_path, index=False)
 
     df = pd.DataFrame(rows)
     df.to_parquet(output_path, index=False)
