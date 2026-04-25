@@ -28,6 +28,7 @@ class IntentClassifier:
         self._model: MultiOutputClassifier | None = None
         self._mlb: MultiLabelBinarizer = MultiLabelBinarizer(classes=[l.value for l in ALL_LABELS])
         self._mlb.fit([[]])  # Initialize with empty data to set classes
+        self._active_mask: np.ndarray = np.ones(len(ALL_LABELS), dtype=bool)
         self.feature_names: list[str] = FEATURE_NAMES
 
     def fit(self, X: np.ndarray, y_multilabel: list[list[str]]) -> None:
@@ -38,6 +39,11 @@ class IntentClassifier:
             y_multilabel: List of label-value lists per sample
         """
         Y = self._mlb.fit_transform(y_multilabel)
+        # Skip labels that only have one class — GradientBoosting requires both True and False
+        self._active_mask: np.ndarray = np.array(
+            [len(np.unique(Y[:, i])) > 1 for i in range(Y.shape[1])]
+        )
+        Y_active = Y[:, self._active_mask]
         base = GradientBoostingClassifier(
             n_estimators=100,
             max_depth=4,
@@ -45,7 +51,7 @@ class IntentClassifier:
             random_state=42,
         )
         self._model = MultiOutputClassifier(base, n_jobs=-1)
-        self._model.fit(X, Y)
+        self._model.fit(X, Y_active)
 
     def predict(self, X: np.ndarray) -> list[list[LabeledIntent]]:
         """Predict intent labels for a batch of feature vectors.
@@ -77,8 +83,13 @@ class IntentClassifier:
         """Return probability matrix of shape (n_samples, n_labels)."""
         if self._model is None:
             raise RuntimeError("Classifier has not been trained or loaded.")
-        proba_cols = [est.predict_proba(X)[:, 1] for est in self._model.estimators_]
-        return np.column_stack(proba_cols)
+        proba_active = np.column_stack(
+            [est.predict_proba(X)[:, 1] for est in self._model.estimators_]
+        )
+        # Reconstruct full label matrix — inactive labels get probability 0
+        probas = np.zeros((X.shape[0], len(ALL_LABELS)))
+        probas[:, self._active_mask] = proba_active
+        return probas
 
     def save(self, path: Path) -> None:
         """Serialize the trained model to disk."""
@@ -90,6 +101,7 @@ class IntentClassifier:
                 "mlb": self._mlb,
                 "threshold": self.threshold,
                 "feature_names": self.feature_names,
+                "active_mask": self._active_mask,
             },
             path,
         )
@@ -107,6 +119,7 @@ class IntentClassifier:
         obj = cls(threshold=data["threshold"])
         obj._model = data["model"]
         obj._mlb = data["mlb"]
+        obj._active_mask = data.get("active_mask", np.ones(len(ALL_LABELS), dtype=bool))
         obj.feature_names = data.get("feature_names", FEATURE_NAMES)
         return obj
 
